@@ -70,7 +70,7 @@ public class AccumuloQueryOrders {
 //                "Where", -77.5, -37.5, -76.5, -36.5,
 //                "When", "2014-07-01T00:00:00.000Z", "2014-09-30T23:59:59.999Z",
 //                "(Who = 'Bierce')");
-    	DataStore dataStore=utils.accumuloUtils.getDataStore();
+    	DataStore dataStore=utils.accumuloUtils.getDataStore("ordersTest");
     	
 //    	utils.accumuloUtils.queryByCql(simpleFeatureTypeName, dataStore, filter);
     	

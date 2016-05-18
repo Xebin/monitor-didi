@@ -8,30 +8,27 @@ import org.geotools.data.FeatureEvent;
 import org.geotools.data.FeatureListener;
 import org.geotools.data.simple.SimpleFeatureSource;
 import org.geotools.feature.DefaultFeatureCollection;
-import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.SchemaException;
 import org.locationtech.geomesa.kafka.KafkaFeatureEvent;
-import org.opengis.feature.Property;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
-import org.opengis.feature.type.Name;
 
 public class kafkaOrdersListener {
 
-    private static void registerListeners(DataStore consumerDS,String sftName) throws IOException, SchemaException {
-            registerListenerForFeature(consumerDS, sftName);
+    private static void registerListeners(DataStore consumerDS,String kafSftName,String accTableName) throws IOException, SchemaException {
+            registerListenerForFeature(consumerDS, kafSftName,accTableName);
     }
 
     // the live consumer must be created before the producer writes features
     // in order to read streaming data.
     // i.e. the live consumer will only read data written after its instantiation
-    private static void registerListenerForFeature(DataStore consumerDS, final String sftName) throws IOException, SchemaException {
+    private static void registerListenerForFeature(DataStore consumerDS, final String sftName,final String accTableName) throws IOException, SchemaException {
     	
         SimpleFeatureSource consumerFS = consumerDS.getFeatureSource(sftName);
         System.out.println("Registering a feature listener for type " + sftName + ".");
-        final DataStore accumuloDS=utils.accumuloUtils.getDataStore();
-        final String simpleFeatureTypeName = "ordersTest";
-        final SimpleFeatureType simpleFeatureType = utils.accumuloUtils.createSimpleFeatureType(simpleFeatureTypeName);
+        final DataStore accumuloDS=utils.accumuloUtils.getDataStore(accTableName);
+        //final String simpleFeatureTypeName = "ordersTest";
+        final SimpleFeatureType simpleFeatureType = utils.accumuloUtils.createSimpleFeatureType(accTableName);
    		final DefaultFeatureCollection featureCollection = new DefaultFeatureCollection();
 
         consumerFS.addFeatureListener(new FeatureListener() {
@@ -41,7 +38,7 @@ public class kafkaOrdersListener {
                 if (featureEvent.getType() == FeatureEvent.Type.CHANGED &&
                         featureEvent instanceof KafkaFeatureEvent) {
                 	    SimpleFeature feature=((KafkaFeatureEvent) featureEvent).feature();
-                	    System.out.println("listen..");
+                	    System.out.println("listen..---:"+sftName);
                 	    utils.mesaUtils.printFeature(feature);
 
                 	    SimpleFeature accumuloSF =dto.kaf2Accumulo.kaf2Accumulo(feature,simpleFeatureType);
@@ -49,7 +46,7 @@ public class kafkaOrdersListener {
 	               		
 	               		try {
 			               		if(featureCollection.getCount()>3){	
-											utils.accumuloUtils.insertFeatures(simpleFeatureTypeName, accumuloDS, featureCollection);
+											utils.accumuloUtils.insertFeatures(accTableName, accumuloDS, featureCollection);
 						                    System.out.println("insert accumulo suc.... " );
 											featureCollection.clear();
 			                       }else{
@@ -67,10 +64,7 @@ public class kafkaOrdersListener {
             }
         });
     }
-    
 
-    
-    
     
     public static void main(String[] args) throws Exception {
 
@@ -83,7 +77,8 @@ public class kafkaOrdersListener {
 
         // create the schema which creates a topic in Kafka
         // (only needs to be done once)
-        registerListeners(consumerDS,"kafkaOrders");
+        registerListeners(consumerDS,"kafkaOrders","ordersTest");
+        registerListeners(consumerDS,"kafkaOrders11","orders11Test");
 
         while (true) {
             // Wait for user to terminate with ctrl-C.
